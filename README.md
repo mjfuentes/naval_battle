@@ -7,7 +7,7 @@ This is a [Sinatra](https://github.com/sinatra/sinatra) application template.
 Clone this repository.
 
 ```bash
-$ git clone https://github.com/TTPS-ruby/sinatra_app_template.git
+$ git clone git@github.com/TTPS-ruby/sinatra_app_template.git
 ```
 
 Remove the origin:
