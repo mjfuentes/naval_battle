@@ -1,15 +1,9 @@
 require 'test_helper'
 
-class AppTest < Minitest::Test
-  include Rack::Test::Methods
-
-  def app
-    Sinatra::Application
-  end
-
+class RootTest < AppTest
   def test_get_root
-    get '/'
+    get '/hello'
     assert_equal 200, last_response.status
-    assert_equal 'Hello World', last_response.body
+    assert_equal 'Hello from sinatra!', last_response.body
   end
 end
