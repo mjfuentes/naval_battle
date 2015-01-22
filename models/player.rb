@@ -1,9 +1,10 @@
 class Player
-  attr_accessor :name, :id
+  attr_accessor :name,:username,:id
   @password;
 
-  def initialize(name, password)
+  def initialize(name,username, password)
     @name = name
+    @username = username
     @password = password
     @id = save_player
   end

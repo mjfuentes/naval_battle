@@ -6,7 +6,16 @@
     margin-top: 150px;
 }
 
-div button {
+.form-label {
+	font-size: 20px;
+	width:200px;
+}
+
+.form-input {
+	margin-right: 0;
+}
+
+.button {
 	display:block;
 	margin-top: 10px;
 	margin-bottom: 10px;
