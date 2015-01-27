@@ -1,3 +1,11 @@
-<div>
-  Welcome <%= @username %>!
+<div align="center" id="game_type" class="center">
+  <h1> Welcome <%= @username %>!</h1>
+  <button id="newGameButton" class="button">New Game</button>
+  <form action="/join/<%= @username %>"><input class="button" type="submit" value="Join Game"/></form>
+</div>
+<div align="center" id="game_size" class="center" hidden>
+  <h1> Select the game size: </h1>
+  <form action="/new/<%= @username %>/small"><input class="button" type="submit" value="5 x 5"/></form>
+  <form action="/new/<%= @username %>/medium"><input class="button" type="submit" value="10 x 10"/></form>
+  <form action="/new/<%= @username %>/large"><input class="button" type="submit" value="15 x 15"/></form>
 </div>
