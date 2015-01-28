@@ -1,27 +1,9 @@
-class Game
-	attr_accessor :players,:size,:started,:id
+require 'active_record'
 
-	def initialize(creator,size)
-		@players = [creator]
-		@size = size
-		@started = false
-		@id = save_game()
-	end
+class Game < ActiveRecord::Base
+	attr_accessor :state 
 
-	def save_game()
-		1
-	end
-
-	def add_second_player(player)
-		@players[1] = player
-	end
-
-	def start()
-		started = true
-		update()
-	end
-
-	def update()
-
+	def start
+		@state = "started"
 	end
 end

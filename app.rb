@@ -1,4 +1,5 @@
 require 'bundler'
+require 'sinatra/json'
 
 ENV['RACK_ENV'] ||= 'development'
 Bundler.require :default, ENV['RACK_ENV'].to_sym
@@ -18,6 +19,17 @@ class Application < Sinatra::Base
 		redirect '/index'
 	end
 
+	get '/main' do
+		if (session[:username]) then
+			@username = session[:username]
+			@userid = session[:userid]
+			@rivals = Player.all
+			erb 'main'.to_sym
+		else
+			redirect '/index'
+		end
+	end
+
 	get '/index' do
 		erb 'welcome'.to_sym
 	end
@@ -30,58 +42,53 @@ class Application < Sinatra::Base
 		erb 'register'.to_sym
 	end
 
+	get '/players' do 
+		status 200
+		json Player.all
+	end
+
+	get '/players/:id/games'
+
 	post '/login' do
-		player = loadPlayer(params[:username],params[:password])
-		@session[:username] = player.username
-		username = player.username
-		name = player.name
-		erb 'main'.to_sym
-	end
-
-	post '/register' do
-		player = Player.new(params[:name],params[:username],params[:password])
-		player.save
-		@session[:username] = player.username
-		username = player.username
-		name = player.name
-		erb 'main'.to_sym
-	end
-
-	get '/new/:user/:size' do
-		if (@session[:username] == params[:user]) then
-			game = Game.new(:user,:size)
-			erb 'waiting'.to_sym
+		player = Player.find_by username: params[:username], password: params[:password]
+		if (player != nil) then
+			session[:username] = player.username
+			session[:userid] = player.id
+			status 201
+			redirect '/main'
 		else
-			username = @session[:username]
-			second_username = params[:user]
-			erb 'permission_error'.to_sym
-		end
-
-	end
-
-	get '/join/:user' do
-		if (session[:username] == params[:user]) then
-			game = getWaitingGame()
-			game.add_second_player(params[:user])
-			game.start()
-			rival = game.players[0]
-			cell_amount = 5
-			cell_size = (cell_amount / 500).round
-			ship_amount = 3
-			erb 'game'.to_sym
-		else
-			@username = session[:username]
-			@second_username = params[:user]
-			erb 'permission_error'.to_sym
+			status 403
+			@error = "Usuario o contraseña invalida"
+			erb 'error'.to_sym
 		end
 	end
 
-
-	def loadPlayer(username,password)
-		Player.new("generico","1234","1234")
+	post '/players' do
+		begin
+			player = Player.create(name: params[:name],username: params[:username], password: params[:password])
+			session[:username] = player.username
+			session[:userid] = player.id
+			status 201
+			@username = player.username
+			redirect '/main'
+		rescue Exception
+			status 403
+			@error = "Hubo un error en la creacion del usuario"
+			erb 'error'.to_sym
+		end
 	end
 
-	def getWaitingGame()
-		game = Game.new("pepito", "small")
+	post '/players/:userid/games' do
+		if (session[:userid] == Integer(params[:userid])) then
+			rival = Player.find_by username: params[:rival]
+			game = Game.create(creator: Integer(session[:userid]),rival: Integer(rival.id),size: params[:size])
+			@game_id = game.id
+			status 201
+			json game
+		else
+			status 400
+			@error = "El usuario no posee permisos para realizar esta accion"
+			erb 'error'.to_sym
+		end
 	end
 end
