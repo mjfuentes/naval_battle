@@ -1,4 +1,6 @@
-class Player
+require 'active_record'
+
+class Player < ActiveRecord::Base
   attr_accessor :name,:username,:id
   @password;
 
@@ -6,12 +8,6 @@ class Player
     @name = name
     @username = username
     @password = password
-    @id = save_player
-  end
-  
-  def save_player
-    #TODO save to DB ###
-    1
   end
   
   def to_a

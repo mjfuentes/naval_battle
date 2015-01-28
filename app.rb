@@ -1,11 +1,9 @@
 require 'bundler'
-require_relative './models/player'
-require_relative './models/game'
 
 ENV['RACK_ENV'] ||= 'development'
 Bundler.require :default, ENV['RACK_ENV'].to_sym
 
-Dir['./models/**/*.rb'].each {|f| require f }
+Dir['./models/*.rb'].each {|f| require f }
 
 class Application < Sinatra::Base
 	register Sinatra::ActiveRecordExtension
@@ -28,33 +26,34 @@ class Application < Sinatra::Base
 		erb 'login'.to_sym
 	end
 
-	get '/register' do
+	get '/register_form' do
 		erb 'register'.to_sym
 	end
 
 	post '/login' do
-		@player = loadPlayer(params[:username],params[:password])
-		session[:username] = @player.username
-		@username = @player.username
-		@name = @player.name
+		player = loadPlayer(params[:username],params[:password])
+		@session[:username] = player.username
+		username = player.username
+		name = player.name
 		erb 'main'.to_sym
 	end
 
-	post '/players' do
-		@player = Player.new(params[:name],params[:username],params[:password])
-		session[:username] = @player.username
-		@username = @player.username
-		@name = @player.name
+	post '/register' do
+		player = Player.new(params[:name],params[:username],params[:password])
+		player.save
+		@session[:username] = player.username
+		username = player.username
+		name = player.name
 		erb 'main'.to_sym
 	end
 
 	get '/new/:user/:size' do
-		if (session[:username] == params[:user]) then
-			@game = Game.new(:user,:size)
+		if (@session[:username] == params[:user]) then
+			game = Game.new(:user,:size)
 			erb 'waiting'.to_sym
 		else
-			@username = session[:username]
-			@second_username = params[:user]
+			username = @session[:username]
+			second_username = params[:user]
 			erb 'permission_error'.to_sym
 		end
 
@@ -62,13 +61,13 @@ class Application < Sinatra::Base
 
 	get '/join/:user' do
 		if (session[:username] == params[:user]) then
-			@game = getWaitingGame()
-			@game.add_second_player(params[:user])
-			@game.start()
-			@rival = @game.players[0]
-			@cell_amount = 5
-			@cell_size = (@cell_amount / 500).round
-			@ship_amount = 3
+			game = getWaitingGame()
+			game.add_second_player(params[:user])
+			game.start()
+			rival = game.players[0]
+			cell_amount = 5
+			cell_size = (cell_amount / 500).round
+			ship_amount = 3
 			erb 'game'.to_sym
 		else
 			@username = session[:username]
