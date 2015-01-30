@@ -88,14 +88,8 @@ $().ready(function(){
 					}
 				},
 				error: function(data) {
-					if (data.responseJSON.code == -1){
-						alert("El juego todavia no comenzó.");
-			   			start_game();
-					}
-					else if (data.responseJSON.code == -2){
-						alert("No es tu turno.");
-			   			start_game();
-					}
+					alert(data.responseJSON.message);
+		   			start_game();
 				}
 			});
 		}
