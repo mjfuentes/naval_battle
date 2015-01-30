@@ -23,6 +23,10 @@ ActiveRecord::Schema.define(version: 20150129191310) do
     t.integer "creator"
     t.integer "rival"
     t.string  "size"
+    t.integer "turn"
+    t.integer "status"
+    t.integer "winner"
+    t.integer "loser"
   end
 
   create_table "players", force: :cascade do |t|

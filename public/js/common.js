@@ -3,4 +3,8 @@ $().ready(function(){
 		$("#game_form").show();
 		$("#game_type").hide();
 	});
+	$("#loadGameButton").click(function(){
+		$("#load_game").show();
+		$("#game_type").hide();
+	});
 });

@@ -17,11 +17,13 @@
 
 .combo {
     text-align: center;
+    width:200px;
+    font-size: 20px;
 }
 
 .button {
-	margin-top: 10px;
-	margin-bottom: 10px;
+	margin-top: 5px;
+	margin-bottom: 5px;
 	font-size: 20px;
 	width:200px;
 }

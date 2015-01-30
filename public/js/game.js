@@ -7,6 +7,7 @@ $().ready(function(){
 	var game_id = $("#game").data("id");
 	var player_id = $("#game").data("player");
 	var rival_id = $("#game").data("rival");
+	var game_status = $("#game").data("status");
 	function createGrid() {
 		if (game_size == "small") {
 			cell_amount = 5;
@@ -37,7 +38,8 @@ $().ready(function(){
 	            })
 	            tile.click(function(){
 	            	var indexes = $(this).attr('id').split('-');
-	            	if(total_selected < selectable_items){
+	            	if((total_selected < selectable_items) && ($(this).data("selected") == null)){
+	            		$(this).data("selected",true);
 		            	selected_items.push(indexes);
 	            		$(this).css("background-color", "gray");
 	            		total_selected++;
@@ -60,6 +62,9 @@ $().ready(function(){
 			   data: {"positions" : selected_items },
 			   success: function(data) {
 					start_game()
+				},
+				error: function(data) {
+					alert("Hubo un error con el pedido");
 				}
 			});
 		}
@@ -69,14 +74,38 @@ $().ready(function(){
 			   type: 'POST',
 			   data: {"position" : selected_items[0], "rival" : rival_id },
 			   success: function(data) {
-					start_game();
+			   		if (data["code"] == 3) {
+			   			alert("Ganaste!");
+			   			window.location.href = window.location.origin + '/index'
+			   		}
+			   		else if (data["code"] == 2){
+			   			alert("Le diste a un barco!");
+			   			start_game();
+			   		}
+			   		else if (data["code"] == 1){
+						alert("Agua.");
+			   			start_game();
+					}
 				},
 				error: function(data) {
-					alert("asdsadasd");
+					if (data.responseJSON.code == -1){
+						alert("El juego todavia no comenzó.");
+			   			start_game();
+					}
+					else if (data.responseJSON.code == -2){
+						alert("No es tu turno.");
+			   			start_game();
+					}
 				}
 			});
 		}
 	});
+
+	function end_game(){
+		game_ended = true;
+		game_started = false;
+		$("#start_game").text("Volver al menu principal!");
+	}
 
     function start_game(){
     	game_started = true;
@@ -87,5 +116,11 @@ $().ready(function(){
     	$("#title").text("Selecciona un objetivo:")
     	$("#start_game").hide();
     	$(".grid_cell").css("background-color", "white");
+    	$(".grid_cell").data("selected", null);
+    }
+
+    if (game_status == "1"){
+    	game_started = true;
+    	start_game();
     }
 });

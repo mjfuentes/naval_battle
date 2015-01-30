@@ -23,7 +23,11 @@ class Application < Sinatra::Base
 		if (session[:username]) then
 			@username = session[:username]
 			@userid = session[:userid]
-			@rivals = Player.all
+			@rivals = Player.where("id != ? ", session[:userid])
+			@games = Game.where("(creator = ? OR rival = ?) AND (status = ? OR status = ?)", session[:userid],session[:userid], 0, 1)
+			if (!@games) then
+				@games = []
+			end
 			erb 'main'.to_sym
 		else
 			redirect '/index'
@@ -31,7 +35,11 @@ class Application < Sinatra::Base
 	end
 
 	get '/index' do
-		erb 'welcome'.to_sym
+		if (!session[:username]) then
+			erb 'welcome'.to_sym
+		else
+			redirect '/main'
+		end
 	end
 
 	get '/login' do
@@ -49,7 +57,8 @@ class Application < Sinatra::Base
 
 	get '/players/:id/games' do
 		if (allowed_user_id(params[:id])) then
-			json Game.all
+			games = @games = Game.where("(creator = ? OR creator = ?) AND (status = ? OR status = ?)", session[:userid],session[:userid], 0, 1)
+			json games
 		else
 			permission_error()
 		end
@@ -57,7 +66,18 @@ class Application < Sinatra::Base
 
 	get '/players/:id/games/:game_id' do
 		if (allowed_user(params[:id],params[:game_id])) then
-			json Game.find_by id: params[:game_id]
+			game =  Game.find_by id: params[:game_id]
+			positions = Game_position.find_by user_id: params[:id], game_id: params[:game_id]
+			rival_id = get_rival(params[:id], game)
+			if (game.status == 0 || game.status == 1) then
+				status 200
+				game.status = (positions == nil) ? 0 : 1
+				show_game(game.id,game.size,session[:userid],rival_id,game.status)
+			else
+				status 400
+				@error = "La partida ya finalizo!" 
+				erb 'error'.to_sym
+			end
 		else
 			permission_error()
 		end
@@ -70,6 +90,12 @@ class Application < Sinatra::Base
 	put '/players/:id/games/:game_id' do
 		if (allowed_user(params[:id],params[:game_id])) then
 			positions = Game_position.create(user_id: params[:id], game_id: params[:game_id], positions: params[:positions])
+			game = Game.find_by id: params[:game_id]
+			rival_id = get_rival(params[:id], game)
+			rival_position = Game_position.find_by user_id: rival_id, game_id: params[:game_id]
+			if (rival_position != nil) then 	
+				game.start
+			end
 			status 200
 		else
 			permission_error()
@@ -78,37 +104,42 @@ class Application < Sinatra::Base
 
 	post '/players/:id/games/:game_id/move' do
 		if (allowed_user(params[:id],params[:game_id])) then
-			text = ""
-			position = [params[:position][0],params[:position][1]]
-			rival_position = Game_position.find_by user_id: params[:rival], game_id: params[:game_id]
-			res = rival_position.positions.has_value?(position)
-			if (res) then
-				key = rival_position.positions.key(position)
-				rival_position.positions.delete(key)
-				if (rival_position.positions.length == 0) then
-					text = "Ganaste!."
+			game = Game.find_by id: params[:game_id]
+			result = {}
+			if (game.status == 1) then
+				if (game.turn == session[:userid]) then
+					game.move_made
+					position = [params[:position][0],params[:position][1]]
+					rival_position = Game_position.find_by user_id: params[:rival], game_id: params[:game_id]
+					res = rival_position.positions.has_value?(position)
+					if (res) then
+						rival_position.delete(position)
+						if (rival_position.positions.length == 0) then
+							##GANASTE
+							result["code"] = 3 
+							game.end session[:userid]
+						else
+							##LE DISTE A UN BARCO
+							result["code"] = 2 
+						end
+					else
+						##AGUA
+						result["code"] = 1 
+					end
+					status 201
 				else
-					text = "Le diste a un barco!"
+					result["code"] = -2 
+					status 403
 				end
-			else
-				text = "Agua."
+			elsif (game.status = 0) then
+				result["code"] = -1 
+				status 403
 			end
-			status 201
-			text
+			json result
 		else
 			permission_error()
 		end
 	end
-
-	# post '/players/:id/games/:game_id/move' do
-	# 	if (allowed_user(params[:id],params[:game_id])) then
-	# 		# text = ""
-	# 		# position = [params[:position][1],params[:position][3]]
-	# 		json params[:position]
-	# 	else
-	# 		permission_error()
-	# 	end
-	# end
 
 	post '/login' do
 		player = Player.find_by username: params[:username], password: params[:password]
@@ -143,13 +174,8 @@ class Application < Sinatra::Base
 		if (allowed_user_id(params[:userid])) then
 			rival = Player.find_by username: params[:rival]
 			game = Game.create(creator: Integer(session[:userid]),rival: Integer(rival.id),size: params[:size])
-			@game_id = game.id
-			@user_id = session[:userid]
-			@game_size = game.size
-			@rival_id = rival.id
-			@rival = game.rival
 			status 201
-			erb 'game'.to_sym
+			show_game(game.id,game.size,game.creator,game.rival,0)
 		else
 			permission_error()
 		end
@@ -180,5 +206,22 @@ class Application < Sinatra::Base
 			end
 			true
 		end
+	end
+
+	def get_rival(user, game)
+		if (Integer(user) == Integer(game.creator))
+			game.rival
+		else
+			game.creator
+		end
+	end
+
+	def show_game(id,size,userid,rivalid,status)
+		@game_id = id
+		@game_size = size
+		@user_id = userid
+		@rival_id = rivalid
+		@game_status = status
+		erb 'game'.to_sym
 	end
 end

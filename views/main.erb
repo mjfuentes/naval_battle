@@ -1,9 +1,11 @@
 <div align="center" id="game_type" class="center">
   <h1> Welcome <%= @username %>!</h1>
   <button id="newGameButton" class="button">New Game</button>
+  <button id="loadGameButton" class="button">Load Game</button>
 <!--   <form action="/join/<%= @username %>"><input class="button" type="submit" value="Join Game"/></form>-->
 </div>
 <form align="center" id="game_form" class="center" action="/players/<%= @userid %>/games" method="post" hidden>
+	<div>
 	<h1> Select the game size: </h1>
 	<input class="combo" name="size" type=text list="sizes">
 	<datalist id="sizes" >
@@ -11,7 +13,8 @@
 	   <option value="medium"> 10 x 10
 	   <option value="large"> 15 x 15
 	</datalist>
-
+	</div>
+	<div>
 	<h1> Select your oponent: </h1>
 	<input class="combo" name="rival" type=text list="rivals">
 	<datalist name="rival" id="rivals" >
@@ -19,5 +22,13 @@
  		 <option value="<%= t.username%>">  <%= t.name%>
 	<% end %>
 	</datalist>
-	<input type="submit" class="button" text="Go!" />
+	</div>
+	<div>
+	<input type="submit" class="button" value="Start!" />
+	</div>
 </form>
+<div id="load_game" align="center" class="center" hidden>
+	<% @games.each do |t| %>
+		<form action="/players/<%= @userid %>/games/<%= t.id%>" method="get"><input class="button" type="submit" value="<%= t.id%>"/></form>
+	<% end %>
+</div>

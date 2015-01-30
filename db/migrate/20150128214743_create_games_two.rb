@@ -4,6 +4,10 @@ class CreateGamesTwo < ActiveRecord::Migration
 			t.integer :creator
 	      	t.integer :rival
 	      	t.string  :size
+	      	t.integer :turn
+	      	t.integer :status
+	      	t.integer :winner
+	      	t.integer :loser
 	  	end
 	end
 end
