@@ -26,8 +26,24 @@ class Application < Sinatra::Base
   		end
 	end
 
+	before '/players/:id/games/:game_id*' do
+		if (session[:game_id]) then
+  			if  !(params[:game_id] && (allowed_user(session[:userid],params[:game_id]))) then
+	  			@error = "No posee permisos para realizar esta accion"
+	  			halt 401, erb('error'.to_sym)
+	  		end
+  		else
+  			redirect '/'
+  		end
+	end
+
 	get '/' do
 		redirect '/index'
+	end
+
+	get '/logout' do
+		session.clear
+		redirect '/'
 	end
 
 	get '/login' do
@@ -36,6 +52,11 @@ class Application < Sinatra::Base
 
 	get '/register_form' do
 		erb 'register'.to_sym
+	end
+
+	get '/players' do
+		status 200
+		json Player.all
 	end
 
 	get '/index' do
@@ -59,12 +80,8 @@ class Application < Sinatra::Base
 	end
 
 	get '/players/:id/games' do
-		if (allowed_user_id(params[:id])) then
-			games = Game.where("(creator = ? OR creator = ?) AND (status = ? OR status = ?)", session[:userid],session[:userid], 0, 1)
-			json games
-		else
-			permission_error()
-		end
+		games = Game.where("(creator = ? OR rival = ?) AND (status = ? OR status = ?)", session[:userid],session[:userid], 0, 1)
+		json games
 	end
 
 	get '/players/:id/games/:game_id' do
@@ -143,13 +160,25 @@ class Application < Sinatra::Base
 
 	post '/players' do
 		begin
-			player = Player.create(name: params[:name],username: params[:username], password: params[:password])
-			session[:username] = player.username
-			session[:userid] = player.id
-			status 201
-			@username = player.username
-			@error = "Usuario creado exitosamente"
-			erb 'error'.to_sym
+			if (valid_username(params[:username])) then
+				if (!exists_user(params[:username])) then
+					player = Player.create(name: params[:name],username: params[:username], password: params[:password])
+					session[:username] = player.username
+					session[:userid] = player.id
+					status 201
+					@username = player.username
+					@error = "Usuario creado exitosamente"
+					erb 'error'.to_sym
+				else
+					status 409
+					@error = "El nombre de usuario ya existe."
+					erb 'error'.to_sym
+				end
+			else
+				status 400
+				@error = "El nombre de usuario no es valido"
+				erb 'error'.to_sym
+			end
 		rescue Exception => e
 			status 403
 			@error = "Hubo un error en la creacion del usuario"
@@ -168,16 +197,15 @@ class Application < Sinatra::Base
 			@error = "Hubo un error en la creacion del juego"
 			erb 'error'.to_sym
 		end
-		
 	end
 
-	# def allowed_user_id(user_id)
-	# 	if (Integer(user_id) == session[:userid]) then
-	# 		true
-	# 	else
-	# 		false
-	# 	end
-	# end
+	def valid_username(username) 
+		/^[a-zA-Z0-9][a-zA-Z0-9_]*$/ =~ username 
+	end
+
+	def exists_user(username)
+		Player.find_by username: username
+	end
 
 	def permission_error()
 		status 400
@@ -186,7 +214,7 @@ class Application < Sinatra::Base
 	end
 
 	def allowed_user(user_id, game_id)
-		if (allowed_user_id(user_id)) then
+		if (Integer(user_id) == session[:userid]) then
 			game = Game.find_by id: game_id, creator: user_id
 			if (game == nil) then
 				game = Game.find_by id: game_id, rival: user_id

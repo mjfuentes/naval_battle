@@ -2,6 +2,7 @@
   <h1> Welcome <%= @username %>!</h1>
   <button id="newGameButton" class="button">New Game</button>
   <button id="loadGameButton" class="button">Load Game</button>
+  <form action="/logout" method="get"><input class="button" type="submit" value="Logout"/></form>
 <!--   <form action="/join/<%= @username %>"><input class="button" type="submit" value="Join Game"/></form>-->
 </div>
 <form align="center" id="game_form" class="center" action="/players/<%= @userid %>/games" method="post" hidden>
