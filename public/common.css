@@ -6,9 +6,26 @@
     margin-top: 150px;
 }
 
+.title {
+    margin-left: auto;
+    margin-right: auto;
+    width: 500px;
+    margin-top: 50px;
+}
+
+.board {
+    display:inline-block;
+    margin-left: 10px;
+}
+
 .form-label {
 	font-size: 20px;
 	width:200px;
+}
+
+.player-label {
+    font-size: 35px;
+    width:200px;
 }
 
 .form-input {
