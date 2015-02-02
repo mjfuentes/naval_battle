@@ -1,13 +1,9 @@
-require './config/environment'
+# require './config/environment'
 require 'bundler/setup'
 require 'rake/testtask'
 require "sinatra/activerecord/rake"
+ require "./mainController"
 
-namespace :db do
-  task :load_config do
-    require "./app"
-  end
-end
 
 Rake::TestTask.new do |t|
   t.libs << 'test'

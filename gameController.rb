@@ -19,10 +19,15 @@ class GameController < Sinatra::Base
 
 	before '/:userid*' do
   		if (session[:userid]) then
-  			if  !(params[:userid] && (Integer(session[:userid]) == Integer(params[:userid]))) then
-	  			@error = "No posee permisos para realizar esta accion"
+			begin
+	  			if  !(params[:userid] && (Integer(session[:userid]) == Integer(params[:userid]))) then
+		  			@error = "No posee permisos para realizar esta accion"
+		  			halt 401, erb('error'.to_sym)
+		  		end
+		  	rescue Exception => e
+				@error = "Parametros invalidos"
 	  			halt 401, erb('error'.to_sym)
-	  		end
+			end
   		else
   			redirect '/'
   		end
@@ -40,9 +45,13 @@ class GameController < Sinatra::Base
 	end
 
 	get '/' do
-		@players = Player.all.collect do |p| p.username end
-		status 200
-		erb 'players'.to_sym
+		if (session[:userid]) then
+			@players = Player.all.collect do |p| p.username end
+			status 200
+			erb 'players'.to_sym
+		else
+			permission_error
+		end
 	end
 
 	get '/:userid' do
@@ -71,7 +80,7 @@ class GameController < Sinatra::Base
 				show_game(game.id,game.size,session[:userid],rival_id,game.status)
 			else
 				status 400
-				@error = "La partida ya finalizo!" 
+				@error = "Game already finished!" 
 				erb 'error'.to_sym
 			end
 		else
@@ -91,45 +100,74 @@ class GameController < Sinatra::Base
 	end
 
 	put '/:id/games/:game_id' do
-		positions = Game_position.create(user_id: params[:id], game_id: params[:game_id], positions: params[:positions])
-		game = Game.find_by id: params[:game_id]
-		rival_id = get_rival(params[:id], game)
-		rival_position = Game_position.find_by user_id: rival_id, game_id: params[:game_id]
-		if (rival_position) then 	
-			game.start
+		begin
+			game = Game.find_by id: params[:game_id]
+			if (game.status == 0) then
+				positions = Game_position.create(user_id: params[:id], game_id: params[:game_id], positions: params[:positions])
+				rival_id = get_rival(params[:id], game)
+				rival_position = Game_position.find_by user_id: rival_id, game_id: params[:game_id]
+				if (rival_position) then 	
+					game.start
+				end
+				status 200
+			else
+				status 400
+				@error = "Game already started, cannot set ships"
+				erb 'error'.to_sym
+			end
+		rescue Exception => e
+			status 400
+			@error = "Hubo un error al crear los barcos"
+			erb 'error'.to_sym
 		end
-		status 200
 	end
 
 	post '/:id/games/:game_id/move' do
-		game = Game.find_by id: params[:game_id]
-		result = {}
-		if (game.status == 1) then
-			if (game.turn == session[:userid]) then
-				target = [params[:position][0],params[:position][1]]
-				rival_position = Game_position.find_by user_id: params[:rival], game_id: params[:game_id]
-				if (rival_position.positions.has_value?(target)) then
-					rival_position.delete(target)
-					if (rival_position.positions.length == 0) then
-						result["code"] = 3 
-						game.end session[:userid]
+		begin
+			game = Game.find_by id: params[:game_id]
+			result = {}
+			case game.status
+			when 1 
+				if (game.is_turn?(session[:userid])) then
+					target = [Integer(params[:position][0]),Integer(params[:position][1])]
+					rival_position = Game_position.find_by user_id: params[:rival], game_id: params[:game_id]
+					if (rival_position.hit?(target)) then
+						if (rival_position.done?) then
+							result["code"] = 3 
+							game.end session[:userid]
+						else
+							result["code"] = 2 
+						end
 					else
-						result["code"] = 2 
+						result["code"] = 1 
 					end
+					game.move_made
+					status 201
 				else
-					result["code"] = 1 
+					result["message"] = "It's not your turn!" 
+					result["code"] = 0 
+					status 403
 				end
-				game.move_made
-				status 201
-			else
-				result["message"] = "No es tu turno!"  
+			when 0
+				result["message"] = "Game has not started yet!" 
+				result["code"] = 0
+				status 403
+			when 2
+				if (game.winner == session[:userid]) then
+					result["message"] = "You won!"
+					result["code"] = 1
+				else
+					result["message"] = "You lost!"
+					result["code"] = 2
+				end
 				status 403
 			end
-		elsif (game.status = 0) then
-			result["message"] = "El juego todavia no comenzó!" 
-			status 403
+			json result
+		rescue Exception => e
+			status 400
+			@error = "Hubo un error al generar el ataque"
+			erb 'error'.to_sym
 		end
-		json result
 	end
 
 	post '/' do
@@ -171,49 +209,5 @@ class GameController < Sinatra::Base
 			@error = "Hubo un error en la creacion del juego"
 			erb 'error'.to_sym
 		end
-	end
-
-	def valid_username(username) 
-		/^[a-zA-Z0-9][a-zA-Z0-9_]*$/ =~ username 
-	end
-
-	def exists_user(username)
-		Player.find_by username: username
-	end
-
-	def permission_error()
-		status 400
-		@error = "El usuario no posee permisos para realizar esta accion"
-		erb 'error'.to_sym
-	end
-
-	def allowed_user(user_id, game_id)
-		if (Integer(user_id) == session[:userid]) then
-			game = Game.find_by id: game_id, creator: user_id
-			if (game == nil) then
-				game = Game.find_by id: game_id, rival: user_id
-				if (game == nil) then
-					false
-				end
-			end
-			true
-		end
-	end
-
-	def get_rival(user, game)
-		if (Integer(user) == Integer(game.creator))
-			game.rival
-		else
-			game.creator
-		end
-	end
-
-	def show_game(id,size,userid,rivalid,status)
-		@game_id = id
-		@game_size = size
-		@user_id = userid
-		@rival_id = rivalid
-		@game_status = status
-		erb 'game'.to_sym
 	end
 end

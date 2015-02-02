@@ -36,4 +36,8 @@ class Game < ActiveRecord::Base
 		self.save
 	end
 
+	def is_turn? player
+		self.turn == player
+	end
+
 end	

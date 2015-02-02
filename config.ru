@@ -1,4 +1,4 @@
-require File.expand_path '../app', __FILE__
+require File.expand_path '../mainController', __FILE__
 require File.expand_path '../gameController', __FILE__
 
 map ('/players'){
@@ -6,5 +6,5 @@ map ('/players'){
 }
 
 map ('/'){
-	run Application
+	run MainController
 }

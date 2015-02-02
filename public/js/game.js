@@ -18,7 +18,7 @@ $().ready(function(){
 			cell_amount = 10;
 			selectable_items = 15;
 		}
-		else if (game_size == "large") {
+		else {
 			cell_amount = 15;
 			selectable_items = 20;
 		}
@@ -118,23 +118,26 @@ $().ready(function(){
 			   data: {"position" : selected_items[0], "rival" : rival_id },
 			   success: function(data) {
 			   		if (data["code"] == 3) {
-			   			alert("Ganaste!");
+			   			alert("You win!");
 			   			window.location.href = window.location.origin + '/index'
 			   		}
 			   		else if (data["code"] == 2){
-			   			alert("Le diste a un barco!");
-			   			start_game();
-			   			createGrids();
+			   			alert("You hit a ship!");
+			   			location.reload();
 			   		}
 			   		else if (data["code"] == 1){
-						alert("Agua.");
-			   			start_game();
-			   			createGrids();
+						alert("Water.");
+			   			location.reload();
 					}
 				},
 				error: function(data) {
 					alert(data.responseJSON.message);
-		   			start_game();
+					if (data.responseJSON.code > 0) {
+						window.location.href = window.location.origin + '/index'
+					}
+					else{
+	   				start_game();
+					}
 				}
 			});
 	});
